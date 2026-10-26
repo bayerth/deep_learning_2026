@@ -1,0 +1,18 @@
+[project]
+name = "dl-winter"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "jupyter",
+    "jupyterlab",
+    "ipykernel",
+    "scikit-learn",
+    "torch",
+    "keras",
+    "torchtune",
+    "transformers",
+    "openai",
+]
