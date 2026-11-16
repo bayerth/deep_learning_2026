@@ -6,7 +6,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
-
+ 
 
 class CharacterTokenizer:
     def __init__(self, text=None, vocab=None, lowercase=True):
