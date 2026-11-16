@@ -6,7 +6,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
- 
+
 
 class CharacterTokenizer:
     def __init__(self, text=None, vocab=None, lowercase=True):
@@ -79,3 +79,18 @@ def text_to_dataset(encoded_text, n_tokens, n_steps=50, batch_size=64):
             shuffle=False,
             drop_last=False,
             )
+
+
+def generate_text(model, tokenizer, prompt, n_next=10):
+    tokens = tokenizer.encode(prompt).tolist()
+    if not tokens:
+        raise ValueError("The prompt must not be empty.")
+
+    for _ in range(n_next):
+        inputs = keras.ops.convert_to_tensor([tokens], dtype="int32")
+        inputs = keras.ops.one_hot(inputs, num_classes=tokenizer.vocab_size)
+        prediction = model.predict(inputs, verbose=0)
+        next_token = int(prediction[0, -1].argmax())
+        tokens.append(next_token)
+
+    return tokenizer.decode(tokens)
