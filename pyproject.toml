@@ -15,4 +15,5 @@ dependencies = [
     "torchtune",
     "transformers",
     "openai",
+    "tokenizers"
 ]

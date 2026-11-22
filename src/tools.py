@@ -53,7 +53,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class TextDataset(Dataset):
-    def __init__(self, encoded_text, n_tokens, n_steps):
+    def __init__(self, encoded_text, n_tokens=None, n_steps=50):
         self.tokens = torch.as_tensor(encoded_text, dtype=torch.long).reshape(-1)
         self.n_tokens = n_tokens
         self.n_steps = n_steps
@@ -66,12 +66,12 @@ class TextDataset(Dataset):
 
     def __getitem__(self, index):
         window = self.tokens[index:index + self.n_steps + 1]
-        X = F.one_hot(window[:-1], num_classes=self.n_tokens).float()
+        X = F.one_hot(window[:-1], num_classes=self.n_tokens).float() if self.n_tokens is not None else window[:-1]
         y = window[1:]
         return X, y
 
 
-def text_to_dataset(encoded_text, n_tokens, n_steps=50, batch_size=64):
+def text_to_dataset(encoded_text, n_tokens=None, n_steps=50, batch_size=64):
     dataset = TextDataset(encoded_text, n_tokens, n_steps)
     return DataLoader(
             dataset,
@@ -81,16 +81,41 @@ def text_to_dataset(encoded_text, n_tokens, n_steps=50, batch_size=64):
             )
 
 
-def generate_text(model, tokenizer, prompt, n_next=10):
-    tokens = tokenizer.encode(prompt).tolist()
+def generate_text(model, tokenizer, prompt, n_next=10, one_hot=False):
+    tokens = tokenizer.encode(prompt).tolist() if isinstance(tokenizer, CharacterTokenizer) \
+        else tokenizer.encode(prompt).ids
     if not tokens:
         raise ValueError("The prompt must not be empty.")
 
     for _ in range(n_next):
         inputs = keras.ops.convert_to_tensor([tokens], dtype="int32")
-        inputs = keras.ops.one_hot(inputs, num_classes=tokenizer.vocab_size)
+        if one_hot:
+            inputs = keras.ops.one_hot(inputs, num_classes=tokenizer.vocab_size)
         prediction = model.predict(inputs, verbose=0)
         next_token = int(prediction[0, -1].argmax())
         tokens.append(next_token)
 
     return tokenizer.decode(tokens)
+
+
+def train_rnn(rnn, train_dl, eval_dl=None, epochs=20, batch_size=32, filename=None, shape=(2, 5)):
+    early_stopping = keras.callbacks.EarlyStopping(
+            monitor="val_loss",
+            mode="min",
+            patience=3,
+            min_delta=1e-4,
+            restore_best_weights=True,
+            )
+    history = rnn.fit(
+            train_dl,
+            validation_data=eval_dl,
+            epochs=epochs,
+            batch_size=batch_size,
+            verbose=1,
+            callbacks=[early_stopping]
+            )
+    loss, accuracy = rnn.evaluate(eval_dl, verbose=2)
+    print(f"Validation loss: {loss:.4f}, Validation accuracy: {accuracy:.4f}")
+    if filename is not None:
+        rnn.save(filename)
+    return history
